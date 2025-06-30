@@ -1,0 +1,122 @@
+-*------------------------------------------------------------------------
+-* Pass &PARAM1 to this FOCEXEC
+-*      '0' for Production
+-*      '1' for UAT
+-*      '2' for Integration
+-*      '3' for Development
+-*------------------------------------------------------------------------
+-* INITIALIZE DEFAULT ENVIRONMENT
+-*------------------------------------------------------------------------
+-DEFAULT &PARAM = '3'
+-DEFAULT &REPNAME = HEX DUMMY REPORT
+-DEFAULT &FLNAME1 = 'HEX_' || &&EXLNAME || '_' ;
+-DEFAULT &U1 = HEX1
+-DEFAULT &U2 = HEX2
+-DEFAULT &U3 = HEX3
+-RUN
+-*------------------------------------------------------------------------
+-SET &ENV = IF &&PARAM1 = '0' THEN 'PROD' ELSE
+-           IF &&PARAM1 = '1' THEN 'UAT'  ELSE
+-           IF &&PARAM1 = '2' THEN 'INT'  ELSE
+-           IF &&PARAM1 = '3' THEN 'DEV'  ELSE 'ERR' ;
+-SET &FROM = 'RMG_Global';
+-SET &FROM_ID = &FROM || '@' || 'hexaware.com' ;
+-SET &MSG1 = 'This is an automated system message - ';
+-SET &MSG2 = 'Please Do not Reply.';
+-SET &FLDATE = '122345678';
+-SET &FLDATE = GETDATE(&FLDATE);
+-SET &FLTIME = HHMMSS('A8');
+-SET &FLEXTN = '.XLS';
+-RUN
+-*------------------------------------------------------------------------
+-TYPEO &FOCFOCEXEC STARTING ON &DATE
+-IF &ENV EQ 'PROD' GOTO PRODSTP ELSE 
+-IF &ENV EQ 'UAT'  GOTO UATSTP  ELSE
+-IF &ENV EQ 'INT'  GOTO INTSTP  ELSE
+-IF &ENV EQ 'DEV'  GOTO DEVSTP  ELSE GOTO ERRSTP ;
+-RUN
+-*------------------------------------------------------------------------
+-PRODSTP  TYPEO PRODSTP
+-SET &U1 = 'PRODHEX1' ;
+-SET &U2 = 'PRODHEX2' ;
+-SET &U3 = 'PRODHEX3' ;
+-GOTO CRMAILFL ;
+-RUN
+-*------------------------------------------------------------------------
+-UATSTP TYPEO UATSTP
+-SET &U1 = 'UATHEX1' ;
+-SET &U2 = 'UATHEX2' ;
+-SET &U3 = 'UATHEX3' ;
+-GOTO CRMAILFL ;
+-RUN
+-*------------------------------------------------------------------------
+-INTSTP TYPEO INTSTP
+-SET &U1 = 'INTHEX1' ;
+-SET &U2 = 'INTHEX2' ;
+-SET &U3 = 'INTHEX3' ;
+-GOTO CRMAILFL ;
+-RUN
+-*------------------------------------------------------------------------
+-DEVSTP TYPEO DEVSTP
+-SET &U1 = 'DEVHEX1' ;
+-SET &U2 = 'DEVHEX2' ;
+-SET &U3 = 'DEVHEX3' ;
+-GOTO CRMAILFL ;
+-RUN
+-*------------------------------------------------------------------------
+-CRMAILFL
+-SET MAILTO1 = &U1 || '@' || hexaware.com ;
+-SET RCPTTO1 = '<' || MAILTO1 '>' ;
+-SET MAILTO2 = &U2 || '@' || hexaware.com ;
+-SET RCPTTO2 = '<' || MAILTO2 '>' ;
+-SET MAILTO3 = &U3 || '@' || hexaware.com ;
+-SET RCPTTO3 = '<' || MAILTO3 '>' ;
+-RUN
+-WRITE PREFIX Hello IBMSYSA
+-WRITE PREFIX Mail From: <&FROM_ID>
+-WRITE PREFIX Rcpt To: &RCPTTO1
+-WRITE PREFIX Rcpt To: &RCPTTO2
+-WRITE PREFIX Rcpt To: &RCPTTO3
+-WRITE PREFIX data
+-WRITE PREFIX From: &FROM_ID
+-WRITE PREFIX To: &RCPTTO1
+-WRITE PREFIX To: &RCPTTO2
+-WRITE PREFIX Cc: &RCPTTO3
+-WRITE PREFIX Subject: &ENV - &FLNAME
+-WRITE PREFIX Mime-Version: 1.0
+-WRITE PREFIX Content-Type: multipart/mixed;
+-WRITE PREFIX               boundary= "boundary_characters"
+-WRITE PREFIX --boundary_characters
+-WRITE PREFIX Content-Type: text/plain
+-WRITE PREFIX 
+-WRITE PREFIX Attached is the "&FLNAME"
+-WRITE PREFIX 
+-WRITE PREFIX &MSG1&MSG2
+-WRITE PREFIX 
+-RUN
+-*------------------------------------------------------------------------
+-WRITE MIDDLE --boundary_characters
+-WRITE MIDDLE Content-Type: application/msexcel;
+-WRITE MIDDLE               charset = "US-ASCII";
+-WRITE MIDDLE               name = "&FLNAME&FLDATE-&FLTIME&FLEXTN
+-WRITE MIDDLE Content-Transfer-Encoding: 7-bit;
+-RUN
+-*------------------------------------------------------------------------
+-WRITE SUFFIX 
+-WRITE SUFFIX .
+-RUN
+-*------------------------------------------------------------------------
+DYNAM COPY PREFIX MAILFILE
+DYNAM COPY MIDDLE MAILFILE APPEND
+DYNAM COPY EXL2K  MAILFILE APPEND
+DYNAM COPY SUFFIX MAILFILE APPEND
+-RUN
+-*------------------------------------------------------------------------
+-GOODRUN
+-TYPE &FOCFOCEXEC COMPLETED ON &DATE
+-EXIT
+-*------------------------------------------------------------------------
+-ERRSTP
+-TYPE &FOCFOCEXEC ABEND ON &DATE
+-QUIT FOCUS 16
+-*------------------------------------------------------------------------
